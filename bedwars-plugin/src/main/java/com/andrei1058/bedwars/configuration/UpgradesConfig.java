@@ -43,6 +43,7 @@ public class UpgradesConfig extends ConfigManager {
         yml.addDefault("default-upgrades-settings.trap-increment-price", 1);
         yml.addDefault("default-upgrades-settings.trap-currency", "diamond");
         yml.addDefault("default-upgrades-settings.trap-queue-limit", 3);
+        yml.addDefault("inv-slots", 45);
 
         if (isFirstTime()) {
             yml.addDefault("upgrade-swords.tier-1.cost", 4);
