@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -42,7 +43,7 @@ public class HealPoolTask extends BukkitRunnable {
         this.maxZ = (teamspawn.getBlockZ() + radius);
         this.minZ = (teamspawn.getBlockZ() - radius);
         this.arena = bwt.getArena();
-        this.runTaskTimerAsynchronously(plugin, 0, 80L);
+        this.runTaskTimerAsynchronously(plugin, 0, config.getInt(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_PARTICLE_REFRESH_INTERVAL));
         healPoolTasks.add(this);
     }
 
@@ -59,7 +60,7 @@ public class HealPoolTask extends BukkitRunnable {
                 for (int z = minZ; z <= maxZ; z++) {
                     l = new Location(arena.getWorld(), x + .5, y + .5, z +.5);
                     if (l.getBlock().getType() != Material.AIR) continue;
-                    int chance = r.nextInt(9);
+                    int chance = r.nextInt(config.getInt(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_PARTICLE_SPARSITY));
                     if (chance == 0) {
                         if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_SEEN_TEAM_ONLY)) {
                             for (Player p : bwt.getMembers()) {
@@ -85,35 +86,48 @@ public class HealPoolTask extends BukkitRunnable {
         }
         return false;
     }
+
+    /**
+     Iterate through the list using an iterator and perform operations.
+     Change the original for loop to use an iterator,
+     to avoid throwing ConcurrentModificationException when removing elements from the list during the loop.
+     @param a Need to remove the Arena of Healing Pool.
+     */
     public static void removeForArena(IArena a){
         if (healPoolTasks.isEmpty() || a == null) return;
-        for (HealPoolTask hpt: healPoolTasks) {
+        Iterator<HealPoolTask> healPoolTasksIterator = healPoolTasks.iterator();
+        while (healPoolTasksIterator.hasNext()) {
+            HealPoolTask hpt = healPoolTasksIterator.next();
             if (hpt == null) continue;
             if (hpt.getArena().equals(a)){
                 hpt.cancel();
-                healPoolTasks.remove(hpt);
+                healPoolTasksIterator.remove();
             }
         }
     }
 
     public  static void removeForArena(String a){
-        if (healPoolTasks == null || healPoolTasks.isEmpty()  || (a == null)) return;
-        for (HealPoolTask hpt: healPoolTasks) {
+        if (healPoolTasks == null || healPoolTasks.isEmpty() || (a == null)) return;
+        Iterator<HealPoolTask> healPoolTasksIterator = healPoolTasks.iterator();
+        while (healPoolTasksIterator.hasNext()) {
+            HealPoolTask hpt = healPoolTasksIterator.next();
             if (hpt == null) continue;
             if (hpt.getArena().getWorldName().equals(a)){
                 hpt.cancel();
-                healPoolTasks.remove(hpt);
+                healPoolTasksIterator.remove();
             }
         }
     }
 
     public  static void removeForTeam(ITeam team){
         if (healPoolTasks == null || healPoolTasks.isEmpty()  || (team == null)) return;
-        for (HealPoolTask hpt:healPoolTasks) {
+        Iterator<HealPoolTask> healPoolTasksIterator = healPoolTasks.iterator();
+        while (healPoolTasksIterator.hasNext()) {
+            HealPoolTask hpt = healPoolTasksIterator.next();
             if (hpt == null) continue;
             if (hpt.getBwt().equals(team)){
                 hpt.cancel();
-                healPoolTasks.remove(hpt);
+                healPoolTasksIterator.remove();
             }
         }
     }
