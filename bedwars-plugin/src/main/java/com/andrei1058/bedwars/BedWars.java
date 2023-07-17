@@ -604,6 +604,8 @@ public class BedWars extends JavaPlugin {
         }
 
         SpoilPlayerTNTFeature.init();
+
+        registerEvents(new EntityTarget());
     }
 
     private void registerDelayedCommands() {
