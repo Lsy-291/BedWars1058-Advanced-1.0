@@ -217,6 +217,8 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                     if (t == null){
                         a.addSpectator(e.getKey(), true, null);
                     } else {
+                        // Prevent the player from accumulating fall distance during the pre-respawn period, which would result in dying again upon respawn.
+                        e.getKey().setFallDistance(0);
                         t.respawnMember(e.getKey());
                         e.getKey().setAllowFlight(false);
                         e.getKey().setFlying(false);

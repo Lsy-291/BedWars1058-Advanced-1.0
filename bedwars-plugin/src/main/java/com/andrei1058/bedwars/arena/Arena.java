@@ -78,6 +78,9 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -2504,28 +2507,60 @@ public class Arena implements IArena {
                     if (playing.equals(player)) continue;
                     BedWars.nms.spigotHidePlayer(player, playing);
                 }
-                PaperSupport.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+
                 player.setAllowFlight(true);
                 player.setFlying(true);
 
+                switch (config.getString(ConfigPath.GENERAL_DEATH_SPECTATOR_LOC))
+                {
+                    case "2":
+                        PaperSupport.teleportC(player, player.getLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                        break;
+                    case "3":
+                        PaperSupport.teleportC(player, getTeam(player).getSpawn(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                        break;
+                    case "1":
+                    default:
+                        PaperSupport.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+                        break;
+                }
+
+                player.setHealth(20);
+                player.setFireTicks(0);
+
                 respawnSessions.put(player, seconds);
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
-                    player.setAllowFlight(true);
-                    player.setFlying(true);
-
                     nms.setCollide(player, this, false);
                     // #274
                     for (Player invisible : getShowTime().keySet()) {
                         BedWars.nms.hideArmor(invisible, player);
                     }
-
-                    updateSpectatorCollideRule(player, false);
-                    PaperSupport.teleportC(player, getReSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
                 }, 10L);
             } else {
+                player.setHealth(20);
+                player.setFireTicks(0);
                 ITeam team = getTeam(player);
                 team.respawnMember(player);
             }
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean checkPlayerHealth(Player p, double d, EntityDamageEvent e)
+    {
+        // damage > player's health
+        if (d > p.getHealth())
+        {
+            if (e != null && e.getCause()!= EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) e.setCancelled(true);
+
+            // Play sound effect for getting hurt
+            Sounds.playSound(Sound.valueOf(BedWars.getForCurrentVersion("HURT_FLESH", "ENTITY_PLAYER_HURT", "ENTITY_PLAYER_HURT")), List.of(p));
+            // Remove all potion effects
+            p.getActivePotionEffects().forEach(effect -> p.removePotionEffect(effect.getType()));
+            // Call event for subsequent processing
+            Bukkit.getServer().getPluginManager().callEvent(new PlayerDeathEvent(p, new ArrayList<>(Arrays.asList(p.getInventory().getContents())), p.getTotalExperience(), null));
+            Bukkit.getServer().getPluginManager().callEvent(new PlayerRespawnEvent(p, p.getLocation(), false));
             return true;
         }
         return false;

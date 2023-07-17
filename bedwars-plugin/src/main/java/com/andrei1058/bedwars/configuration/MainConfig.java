@@ -131,6 +131,7 @@ public class MainConfig extends ConfigManager {
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_ENEMY, 2.0);
         yml.addDefault(ConfigPath.GENERAL_FIREBALL_DAMAGE_TEAMMATES, 0.0);
         yml.addDefault(ConfigPath.GENERAL_BUCKET_REMOVED_AFTER_PLACEMENT_ENABLE, false);
+        yml.addDefault(ConfigPath.GENERAL_DEATH_SPECTATOR_LOC, "1");
 
         //
         yml.addDefault("database.enable", false);

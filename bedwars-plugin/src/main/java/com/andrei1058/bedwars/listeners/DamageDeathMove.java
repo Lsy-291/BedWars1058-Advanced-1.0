@@ -58,6 +58,7 @@ import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 
 import java.text.DecimalFormat;
+import java.util.List;
 import java.util.Map;
 
 import static com.andrei1058.bedwars.BedWars.*;
@@ -112,6 +113,9 @@ public class DamageDeathMove implements Listener {
                         e.setCancelled(true);
                     } else BedWarsTeam.reSpawnInvulnerability.remove(p.getUniqueId());
                 }
+                // Exclude explosive damage, as handling explosive damage here would be very high.
+                // The explosive damage can be customized and needs to be handled elsewhere.
+                if (e.getCause() != EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) Arena.checkPlayerHealth(p, e.getDamage(), e);
                 //}
 
             }
@@ -170,18 +174,16 @@ public class DamageDeathMove implements Listener {
                 boolean projectile = false;
                 if (e.getDamager() instanceof Player) {
                     damager = (Player) e.getDamager();
+                    if (a.isReSpawning(damager)) {
+                        e.setCancelled(true);
+                        return;
+                    }
                 } else if (e.getDamager() instanceof Projectile) {
                     ProjectileSource shooter = ((Projectile) e.getDamager()).getShooter();
                     if (shooter instanceof Player) {
                         damager = (Player) shooter;
                     } else return;
                     projectile = true;
-                } else if (e.getDamager() instanceof Player) {
-                    damager = (Player) e.getDamager();
-                    if (a.isReSpawning(damager)) {
-                        e.setCancelled(true);
-                        return;
-                    }
                 } else if (e.getDamager() instanceof TNTPrimed) {
                     TNTPrimed tnt = (TNTPrimed) e.getDamager();
                     if (tnt.getSource() != null) {
@@ -212,6 +214,7 @@ public class DamageDeathMove implements Listener {
                                     }
                                 }
                             }
+                            Arena.checkPlayerHealth(p, e.getDamage(), null);
                         } else return;
                     }
                 } else if ((e.getDamager() instanceof Silverfish) || (e.getDamager() instanceof IronGolem)) {
@@ -496,54 +499,64 @@ public class DamageDeathMove implements Listener {
                 victimsTeam.getGenerators().clear();
             }
         }
+
+        if (EntityTarget.entityTargetRecords.containsKey(victim))
+        {
+            List<Entity> hatePlayerEntitys = EntityTarget.entityTargetRecords.get(victim);
+            hatePlayerEntitys.forEach(hateEntity -> {
+                ((Creature) hateEntity).setTarget(null);
+            });
+            EntityTarget.entityTargetRecords.remove(victim);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent e) {
         IArena a = Arena.getArenaByPlayer(e.getPlayer());
+        Player p = e.getPlayer();
         if (a == null) {
-            SetupSession ss = SetupSession.getSession(e.getPlayer().getUniqueId());
+            SetupSession ss = SetupSession.getSession(p.getUniqueId());
             if (ss != null) {
-                e.setRespawnLocation(e.getPlayer().getWorld().getSpawnLocation());
+                e.setRespawnLocation(p.getWorld().getSpawnLocation());
             }
         } else {
-            if (a.isSpectator(e.getPlayer())) {
+            if (a.isSpectator(p)) {
                 e.setRespawnLocation(a.getSpectatorLocation());
-                String iso = Language.getPlayerLanguage(e.getPlayer()).getIso();
+                String iso = Language.getPlayerLanguage(p).getIso();
                 for (IGenerator o : a.getOreGenerators()) {
-                    o.updateHolograms(e.getPlayer(), iso);
+                    o.updateHolograms(p, iso);
                 }
                 for (ITeam t : a.getTeams()) {
                     for (IGenerator o : t.getGenerators()) {
-                        o.updateHolograms(e.getPlayer(), iso);
+                        o.updateHolograms(p, iso);
                     }
                 }
                 for (ShopHolo sh : ShopHolo.getShopHolo()) {
                     if (sh.getA() == a) {
-                        sh.updateForPlayer(e.getPlayer(), iso);
+                        sh.updateForPlayer(p, iso);
                     }
                 }
-                a.sendSpectatorCommandItems(e.getPlayer());
+                a.sendSpectatorCommandItems(p);
                 return;
             }
-            ITeam t = a.getTeam(e.getPlayer());
+            ITeam t = a.getTeam(p);
             if (t == null) {
                 e.setRespawnLocation(a.getReSpawnLocation());
-                plugin.getLogger().severe(e.getPlayer().getName() + " re-spawn error on " + a.getArenaName() + "[" + a.getWorldName() + "] because the team was NULL and he was not spectating!");
+                plugin.getLogger().severe(p.getName() + " re-spawn error on " + a.getArenaName() + "[" + a.getWorldName() + "] because the team was NULL and he was not spectating!");
                 plugin.getLogger().severe("This is caused by one of your plugins: remove or configure any re-spawn related plugins.");
-                a.removePlayer(e.getPlayer(), false);
-                a.removeSpectator(e.getPlayer(), false);
+                a.removePlayer(p, false);
+                a.removeSpectator(p, false);
                 return;
             }
             if (t.isBedDestroyed()) {
                 e.setRespawnLocation(a.getSpectatorLocation());
-                a.addSpectator(e.getPlayer(), true, null);
-                t.getMembers().remove(e.getPlayer());
-                e.getPlayer().sendMessage(getMsg(e.getPlayer(), Messages.PLAYER_DIE_ELIMINATED_CHAT));
+                a.addSpectator(p, true, null);
+                t.getMembers().remove(p);
+                p.sendMessage(getMsg(p, Messages.PLAYER_DIE_ELIMINATED_CHAT));
                 if (t.getMembers().isEmpty()) {
                     Bukkit.getPluginManager().callEvent(new TeamEliminatedEvent(a, t));
-                    for (Player p : a.getWorld().getPlayers()) {
-                        p.sendMessage(getMsg(p, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(p))));
+                    for (Player eachPlayer : a.getWorld().getPlayers()) {
+                        eachPlayer.sendMessage(getMsg(eachPlayer, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(eachPlayer))));
                     }
                     Bukkit.getScheduler().runTaskLater(plugin, a::checkWinner, 40L);
                 }
@@ -551,12 +564,10 @@ public class DamageDeathMove implements Listener {
                 //respawn session
                 int respawnTime = config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_COUNTDOWN);
                 if (respawnTime > 1) {
-                    e.setRespawnLocation(a.getReSpawnLocation());
-                    a.startReSpawnSession(e.getPlayer(), respawnTime);
+                    a.startReSpawnSession(p, respawnTime);
                 } else {
                     // instant respawn configuration
-                    e.setRespawnLocation(t.getSpawn());
-                    t.respawnMember(e.getPlayer());
+                    t.respawnMember(p);
                 }
             }
         }

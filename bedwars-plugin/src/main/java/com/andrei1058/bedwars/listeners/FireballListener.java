@@ -113,19 +113,22 @@ public class FireballListener implements Listener {
                 new LastHit(player, source, System.currentTimeMillis());
             }
 
+            double playerDamageTaken = 0;
             if(player.equals(source)) {
                 if(damageSelf > 0) {
-                    player.damage(damageSelf); // damage shooter
+                    playerDamageTaken = damageSelf; // damage shooter
                 }
             } else if(arena.getTeam(player).equals(arena.getTeam(source))) {
                 if(damageTeammates > 0) {
-                    player.damage(damageTeammates); // damage teammates
+                    playerDamageTaken = damageTeammates; // damage teammates
                 }
             } else {
                 if(damageEnemy > 0) {
-                    player.damage(damageEnemy); // damage enemies
+                    playerDamageTaken = damageEnemy; // damage enemies
                 }
             }
+
+            if (!Arena.checkPlayerHealth(player, playerDamageTaken, null)) player.damage(playerDamageTaken);
         }
     }
 
