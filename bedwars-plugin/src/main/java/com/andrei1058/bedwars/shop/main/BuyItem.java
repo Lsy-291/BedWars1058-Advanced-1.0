@@ -38,8 +38,7 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import static com.andrei1058.bedwars.BedWars.nms;
-import static com.andrei1058.bedwars.BedWars.plugin;
+import static com.andrei1058.bedwars.BedWars.*;
 
 @SuppressWarnings("WeakerAccess")
 public class BuyItem implements IBuyItem {
@@ -261,8 +260,35 @@ public class BuyItem implements IBuyItem {
                 }
             }
         }
-        //
-        player.getInventory().addItem(i);
+
+        if (!config.getBoolean(ConfigPath.GENERAL_PURCHASE_FORBIDDEN_WHEN_INV_FULL))
+        {
+            int fillableAmount = 0;
+            for (ItemStack stack : player.getInventory().getContents()) {
+                if (fillableAmount >= i.getAmount()) {
+                    break;
+                }
+
+                if (stack == null) {
+                    fillableAmount += i.getMaxStackSize();
+                } else if (stack.isSimilar(i) && stack.getAmount() < stack.getMaxStackSize()) {
+                    fillableAmount += stack.getMaxStackSize() - stack.getAmount();
+                }
+            }
+
+            if (fillableAmount >= i.getAmount()) player.getInventory().addItem(i);
+            else
+            {
+                ItemStack giveItem = i.clone();
+                giveItem.setAmount(fillableAmount);
+                ItemStack dropItem = i.clone();
+                dropItem.setAmount(i.getAmount() - fillableAmount);
+                player.getInventory().addItem(giveItem);
+                arena.getWorld().dropItem(player.getLocation(), dropItem);
+            }
+        }
+        else player.getInventory().addItem(i);
+
         player.updateInventory();
     }
 

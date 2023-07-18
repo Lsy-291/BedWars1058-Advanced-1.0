@@ -45,6 +45,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.andrei1058.bedwars.BedWars.config;
 import static com.andrei1058.bedwars.BedWars.nms;
 import static com.andrei1058.bedwars.api.language.Language.getMsg;
 
@@ -136,6 +137,20 @@ public class CategoryContent implements ICategoryContent {
     }
 
     public void execute(Player player, ShopCache shopCache, int slot) {
+        boolean itemAutoEquip = false;
+        for (IBuyItem item : contentTiers.get(shopCache.getContentTier(getIdentifier()) - 1).getBuyItemsList()) {
+             if (item.isAutoEquip()) itemAutoEquip = true;
+        }
+
+        if (config.getBoolean(ConfigPath.GENERAL_PURCHASE_FORBIDDEN_WHEN_INV_FULL) && !itemAutoEquip)
+        {
+            if (player.getInventory().firstEmpty() == -1)
+            {
+                player.sendMessage(getMsg(player, Messages.SHOP_INV_FULL_PURCHASE_LIMIT));
+                Sounds.playSound(ConfigPath.SOUNDS_INSUFF_MONEY, player);
+                return;
+            }
+        }
 
         IContentTier ct;
 
@@ -186,7 +201,6 @@ public class CategoryContent implements ICategoryContent {
 
         //upgrade if possible
         shopCache.upgradeCachedItem(this, slot);
-
 
         //give items
         giveItems(player, shopCache, Arena.getArenaByPlayer(player));
