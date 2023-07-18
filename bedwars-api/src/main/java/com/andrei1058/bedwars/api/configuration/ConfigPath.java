@@ -236,6 +236,7 @@ public class ConfigPath {
     public static final String GENERAL_FIREBALL_DAMAGE_TEAMMATES = GENERAL_FIREBALL_DAMAGE_PATH + ".teammates";
     public static final String GENERAL_BUCKET_REMOVED_AFTER_PLACEMENT_ENABLE = ".bucket-removed-after-placement";
     public static final String GENERAL_DEATH_SPECTATOR_LOC = ".death-spectator-loc";
+    public static final String GENERAL_PURCHASE_FORBIDDEN_WHEN_INV_FULL = ".purchase-forbidden-when-inv-full";
 
     public static final String GENERAL_CONFIGURATION_PERFORMANCE_PATH = "performance-settings";
     public static final String GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN = GENERAL_CONFIGURATION_PERFORMANCE_PATH + ".rotate-generators";

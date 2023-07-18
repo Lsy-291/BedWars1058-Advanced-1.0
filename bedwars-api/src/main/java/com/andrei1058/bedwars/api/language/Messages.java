@@ -358,6 +358,7 @@ public class Messages {
     public static String SHOP_UTILITY_NPC_IRON_GOLEM_NAME = "shop-utility-iron-golem";
     public static String SHOP_INSUFFICIENT_MONEY = "shop-insuff-money";
     public static String SHOP_ALREADY_BOUGHT = "shop-already-bought";
+    public static String SHOP_INV_FULL_PURCHASE_LIMIT = "shop-inv-full-purchase-limit";
     public static final String SHOP_PATH = "shop-items-messages";
     public static final String SHOP_LORE_STATUS_CANT_AFFORD = "shop-lore-status-cant-afford";
     public static final String SHOP_LORE_STATUS_CAN_BUY = "shop-lore-status-can-buy";
