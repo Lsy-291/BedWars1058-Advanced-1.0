@@ -301,7 +301,7 @@ public class BedWarsTeam implements ITeam {
                     i = nms.addCustomData(i, "DEFAULT_ITEM");
 
                     if (BedWars.nms.isSword(i)) {
-                        p.getInventory().addItem(i);
+                        p.getInventory().addItem(handleItemEnchantment(i));
                         break;
                     }
                 } catch (Exception ignored) {
@@ -602,7 +602,7 @@ public class BedWarsTeam implements ITeam {
         for (Player p : getMembers()) {
             for (ItemStack i : p.getInventory().getContents()) {
                 if (i == null) continue;
-                if (nms.isSword(i)) {
+                if (nms.isSword(i) || nms.isAxe(i)) {
                     ItemMeta im = i.getItemMeta();
                     im.addEnchant(e, a, true);
                     i.setItemMeta(im);
@@ -642,6 +642,24 @@ public class BedWarsTeam implements ITeam {
                 }
             }
         }, 20L);
+    }
+
+    public ItemStack handleItemEnchantment(ItemStack item)
+    {
+        ItemMeta itemMeta = item.getItemMeta();
+
+        if (itemMeta.hasEnchants()) {
+            itemMeta.getEnchants().keySet().forEach(itemMeta::removeEnchant);
+            item.setItemMeta(itemMeta);
+        }
+
+        if (!getSwordsEnchantments().isEmpty()) {
+            getSwordsEnchantments().forEach(enchantment -> {
+                item.addEnchantment(enchantment.getEnchantment(), enchantment.getAmplifier());
+            });
+        }
+
+        return item;
     }
 
     /**

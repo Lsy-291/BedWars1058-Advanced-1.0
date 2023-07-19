@@ -27,6 +27,7 @@ import com.andrei1058.bedwars.api.upgrades.EnemyBaseEnterTrap;
 import org.bukkit.Location;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
@@ -216,6 +217,8 @@ public interface ITeam {
      * @param a amplifier.
      */
     void addArmorEnchantment(Enchantment e, int a);
+
+    ItemStack handleItemEnchantment(ItemStack item);
 
     /**
      * Check if target has played in this match.

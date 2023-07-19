@@ -39,6 +39,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 
@@ -229,5 +230,18 @@ public class Inventory implements Listener {
     public void onGameEnd(GameStateChangeEvent e) {
         if(e.getNewState() != GameState.restarting) return;
         e.getArena().getPlayers().forEach(Player::closeInventory); // close any open guis when the game ends (e.g. shop)
+    }
+
+    @EventHandler
+    public void onPickUp(PlayerPickupItemEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = event.getItem().getItemStack();
+        IArena arena = Arena.getArenaByPlayer(player);
+
+        if (nms.isSword(item))
+        {
+            event.getItem().setItemStack(arena.getTeam(player).handleItemEnchantment(item));
+        }
+
     }
 }
