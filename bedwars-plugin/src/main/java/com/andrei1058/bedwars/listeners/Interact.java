@@ -47,6 +47,7 @@ import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Openable;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -144,6 +145,10 @@ public class Interact implements Listener {
                         e.setCancelled(true);
                         return;
                     }
+
+                    InventoryHolder invHolder = (InventoryHolder) b.getState();
+                    ItemStack[] invContents = invHolder.getInventory().getContents();
+
                     //make it so only team members can open chests while team is alive, and all when is eliminated
                     ITeam owner = null;
                     int isRad = a.getConfig().getInt(ConfigPath.ARENA_ISLAND_RADIUS);
@@ -152,12 +157,32 @@ public class Interact implements Listener {
                             owner = t;
                         }
                     }
+                    boolean canOpen = true;
                     if (owner != null) {
                         if (!owner.isMember(p)) {
                             if (!(owner.getMembers().isEmpty() && owner.isBedDestroyed())) {
                                 e.setCancelled(true);
+                                canOpen = false;
                                 p.sendMessage(getMsg(p, Messages.INTERACT_CHEST_CANT_OPEN_TEAM_ELIMINATED));
                             }
+                        }
+                    }
+
+                    if (canOpen)
+                    {
+                        for (ItemStack item : invContents) {
+                            if (item != null && nms.isSword(item)) {
+                                item.setItemMeta(a.getTeam(p).handleItemEnchantment(item).getItemMeta());
+                            }
+                        }
+                    }
+                }
+                if (b.getType() == Material.ENDER_CHEST)
+                {
+                    for (ItemStack item : p.getEnderChest().getContents())
+                    {
+                        if (item != null && nms.isSword(item)) {
+                            item.setItemMeta(a.getTeam(p).handleItemEnchantment(item).getItemMeta());
                         }
                     }
                 }
