@@ -23,7 +23,6 @@ package com.andrei1058.bedwars.shop.defaultrestore;
 import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -112,37 +111,29 @@ public class ShopItemRestoreListener {
      *
      * @return true to cancel the event.
      */
-    private static boolean manageDrop(Entity player, Item item) {
+    private static boolean manageDrop(Entity player, Item dropItem) {
         if (!(player instanceof Player)) return false;
         if (api.getArenaUtil().getArenaByPlayer((Player) player) == null) return false;
         IArena a = api.getArenaUtil().getArenaByPlayer((Player) player);
         if (a.getStatus() != GameState.playing) return false;
         if (!a.isPlayer((Player) player)) return false;
-        if (api.getVersionSupport().isCustomBedWarsItem(item.getItemStack())
-                && api.getVersionSupport().getCustomData(item.getItemStack()).equalsIgnoreCase("DEFAULT_ITEM")
-                && api.getVersionSupport().isSword(item.getItemStack())) {
-            boolean hasSword = false;
-            for (ItemStack is : ((Player) player).getInventory()) {
-                if (is == null) continue;
-                if (api.getVersionSupport().isSword(is)) {
-                    if (api.getVersionSupport().getDamage(is) >= api.getVersionSupport().getDamage(item.getItemStack())) {
-                        hasSword = true;
-                        break;
-                    }
-                }
-            }
+        ItemStack dropItemStack = dropItem.getItemStack();
 
-            return !hasSword;
-        } else {
-            boolean sword = false;
-            for (ItemStack is : ((Player) player).getInventory()) {
-                if (is == null) continue;
-                if (api.getVersionSupport().isSword(is)) {
-                    sword = true;
+        // Prohibit dropping default items
+        if (api.getVersionSupport().isCustomBedWarsItem(dropItemStack)
+                && api.getVersionSupport().getCustomData(dropItemStack).equalsIgnoreCase("DEFAULT_ITEM")) return true;
+        // If the player drops a sword, check if they have any other swords in their inventory. If not, give them a default wooden sword.
+        else if (api.getVersionSupport().isSword(dropItem.getItemStack()))
+        {
+            boolean hasSword = false;
+            for (ItemStack item : ((Player) player).getInventory().getContents()) {
+                if (item != null && api.getVersionSupport().isSword(item))
+                {
+                    hasSword = true;
                     break;
                 }
             }
-            if (!sword) a.getTeam((Player) player).defaultSword((Player) player, true);
+            if (!hasSword) a.getTeam((Player) player).defaultSword((Player) player, true);
         }
         return false;
     }
@@ -156,25 +147,40 @@ public class ShopItemRestoreListener {
          */
         @EventHandler
         public void onInventoryClose(InventoryCloseEvent e) {
-            if (e.getInventory().getType() == InventoryType.PLAYER) return;
-            if (api.getArenaUtil().getArenaByPlayer((Player) e.getPlayer()) == null) return;
-            IArena a = api.getArenaUtil().getArenaByPlayer((Player) e.getPlayer());
+            Player player = (Player) e.getPlayer();
+            if (e.getInventory().getType() == InventoryType.CRAFTING) return;
+            if (api.getArenaUtil().getArenaByPlayer(player) == null) return;
+            IArena a = api.getArenaUtil().getArenaByPlayer(player);
             if (a.getStatus() != GameState.playing) return;
-            if (!a.isPlayer((Player) e.getPlayer())) return;
+            if (!a.isPlayer(player)) return;
 
-            boolean sword = false;
-            for (ItemStack is : e.getPlayer().getInventory()) {
-                if (is == null) continue;
-                if (is.getType() == Material.AIR) continue;
-                if (api.getVersionSupport().isSword(is)) sword = true;
+            boolean hasNormalSword = false;
+            boolean hasDefaultSowrd = false;
+            int defaultSwordSlot = 0;
+
+            ItemStack[] playerInvContents = e.getPlayer().getInventory().getContents();
+            for (int i = 0; i < playerInvContents.length; i++) {
+                ItemStack item = playerInvContents[i];
+                if (item == null) continue;
+                if (api.getVersionSupport().isSword(item))
+                {
+                    if (api.getVersionSupport().isCustomBedWarsItem(item)
+                            && api.getVersionSupport().getCustomData(item).equalsIgnoreCase("DEFAULT_ITEM"))
+                    {
+                        defaultSwordSlot = i;
+                        hasDefaultSowrd = true;
+                    }
+                    else hasNormalSword = true;
+                }
             }
 
-            if (!sword) {
+            if (!hasDefaultSowrd && !hasNormalSword) {
                 ITeam team = a.getTeam((Player) e.getPlayer());
                 if (team != null && !a.isReSpawning((Player) e.getPlayer())) {
                     team.defaultSword((Player) e.getPlayer(), true);
                 }
             }
+            else if (hasDefaultSowrd && hasNormalSword) player.getInventory().clear(defaultSwordSlot);
         }
     }
 }

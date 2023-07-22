@@ -141,9 +141,7 @@ public class Inventory implements Listener {
         }
 
         if (e.getCurrentItem() == null) return;
-        if (e.getCurrentItem().
-
-                getType() == Material.AIR) return;
+        if (e.getCurrentItem().getType() == Material.AIR) return;
 
         Player p = (Player) e.getWhoClicked();
         ItemStack i = e.getCurrentItem();
