@@ -28,11 +28,9 @@ import com.andrei1058.bedwars.api.server.ISetupSession;
 import com.andrei1058.bedwars.api.server.RestoreAdapter;
 import com.andrei1058.bedwars.api.server.ServerType;
 import com.andrei1058.bedwars.api.util.FileUtil;
-import com.andrei1058.bedwars.api.util.ZipFileUtil;
 import com.flowpowered.nbt.CompoundMap;
 import com.flowpowered.nbt.CompoundTag;
 import com.flowpowered.nbt.IntTag;
-import com.flowpowered.nbt.stream.NBTInputStream;
 import com.flowpowered.nbt.stream.NBTOutputStream;
 import com.grinderwolf.swm.api.SlimePlugin;
 import com.grinderwolf.swm.api.exceptions.*;
@@ -40,14 +38,12 @@ import com.grinderwolf.swm.api.loaders.SlimeLoader;
 import com.grinderwolf.swm.api.world.SlimeWorld;
 import com.grinderwolf.swm.api.world.properties.SlimeProperties;
 import com.grinderwolf.swm.api.world.properties.SlimePropertyMap;
-import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
@@ -57,6 +53,7 @@ public class SlimeAdapter extends RestoreAdapter {
 
     private final SlimePlugin slime;
     private final BedWars api;
+    private final File worldConvertFolder = new File(getOwner().getDataFolder(), "Swm-Convert");
 
     public SlimeAdapter(Plugin plugin) {
         super(plugin);
@@ -308,65 +305,51 @@ public class SlimeAdapter extends RestoreAdapter {
      * Convert vanilla worlds to the slime format.
      */
     public void convertWorlds() {
-        File dir = new File(getOwner().getDataFolder(), "/Arenas");
-        File ff;
-        SlimeLoader sl = slime.getLoader("file");
-        if (dir.exists()) {
-            File[] fls = dir.listFiles();
-            if (fls != null) {
-                for (File fl : fls) {
-                    if (fl.isFile()) {
-                        if (fl.getName().endsWith(".yml")) {
-                            final String name = fl.getName().replace(".yml", "").toLowerCase();
-                            ff = new File(Bukkit.getWorldContainer(), fl.getName().replace(".yml", ""));
-                            try {
-                                if (!sl.worldExists(name)) {
-                                    if (!fl.getName().equals(name)) {
-                                        if (!fl.renameTo(new File(dir, name + ".yml"))) {
-                                            getOwner().getLogger().log(Level.WARNING, "Could not rename " + fl.getName() + ".yml to " + name + ".yml");
-                                        }
-                                    }
-                                    File bc = new File(getOwner().getDataFolder() + "/Cache", ff.getName() + ".zip");
-                                    if (ff.exists() && bc.exists()) {
-                                        FileUtil.delete(ff);
-                                        ZipFileUtil.unzipFileIntoDirectory(bc, new File(Bukkit.getWorldContainer(), name));
-                                    }
-                                    deleteWorldTrash(name);
-                                    handleLevelDat(name);
+        int worldToBeConverted = 0;
+        List<String> failedWorldConversion = new ArrayList<>();
 
-                                    convertWorld(name, null);
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
+        if (!worldConvertFolder.exists()) {
+            if (!worldConvertFolder.mkdirs()) getOwner().getLogger().warning("Unable to create conversion world folder");
+        } else {
+            File[] subDirectories = worldConvertFolder.listFiles(File::isDirectory);
+            if (subDirectories != null) {
+                worldToBeConverted = subDirectories.length;
+                for (File worldFolder : subDirectories)
+                {
+                    String worldName = worldFolder.getName();
+
+                    deleteWorldTrash(worldName);
+
+                    try {
+                        handleLevelDat(worldName);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    if (!convertWorld(worldFolder.getName(), null))
+                    {
+                        failedWorldConversion.add(worldName);
                     }
                 }
             }
         }
-        Bukkit.getScheduler().runTaskAsynchronously(getOwner(), () -> {
-            File[] files = Bukkit.getWorldContainer().listFiles();
-            if (files != null) {
-                for (File f : files) {
-                    if (f != null && f.isDirectory()) {
-                        if (f.getName().contains("bw_temp_")) {
-                            try {
-                                FileUtils.deleteDirectory(f);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }
-            }
-        });
+
+        int successfulWorldConversions = worldToBeConverted - failedWorldConversion.size();
+
+        getOwner().getLogger().info(String.format("Detected subdirectories: %d Converted worlds: %d Failed conversions: %d", worldToBeConverted, successfulWorldConversions, failedWorldConversion.size()));
+
+        if (failedWorldConversion.size() > 0)
+        {
+            getOwner().getLogger().warning("The worlds of the following folders cannot be converted properly: " + String.join(" ", failedWorldConversion));
+        }
     }
 
-    private void convertWorld(String name, Player player) {
+    private boolean convertWorld(String name, Player player) {
         SlimeLoader sl = slime.getLoader("file");
         try {
             getOwner().getLogger().log(Level.INFO, "Converting " + name + " to the Slime format.");
-            slime.importWorld(new File(Bukkit.getWorldContainer(), name), name, sl);
+            slime.importWorld(new File(worldConvertFolder, name), name, sl);
+            return true;
         } catch (WorldAlreadyExistsException | InvalidWorldException | WorldLoadedException | WorldTooBigException | IOException e) {
             if (player != null) {
                 player.sendMessage(ChatColor.RED + "Could not convert " + name + " to the Slime format.");
@@ -378,15 +361,16 @@ public class SlimeAdapter extends RestoreAdapter {
             }
             getOwner().getLogger().log(Level.WARNING, "Could not convert " + name + " to the Slime format.");
             e.printStackTrace();
+            return false;
         }
     }
 
     private void deleteWorldTrash(String world) {
-        for (File f : new File[]{/*new File(Bukkit.getWorldContainer(), world+"/level.dat"),*/
-                new File(Bukkit.getWorldContainer(), world + "/level.dat_mcr"),
-                new File(Bukkit.getWorldContainer(), world + "/level.dat_old"),
-                new File(Bukkit.getWorldContainer(), world + "/session.lock"),
-                new File(Bukkit.getWorldContainer(), world + "/uid.dat")}) {
+        for (File f : new File[]{
+                new File(worldConvertFolder, world + "/level.dat_mcr"),
+                new File(worldConvertFolder, world + "/level.dat_old"),
+                new File(worldConvertFolder, world + "/session.lock"),
+                new File(worldConvertFolder, world + "/uid.dat")}) {
             if (f.exists()) {
                 if (!f.delete()) {
                     getOwner().getLogger().warning("Could not delete: " + f.getPath());
@@ -398,37 +382,28 @@ public class SlimeAdapter extends RestoreAdapter {
 
     private void handleLevelDat(String world) throws IOException {
 
-        File level = new File(Bukkit.getWorldContainer(), world + "/level.dat");
+        File level = new File(worldConvertFolder, world + "/level.dat");
 
         if (!level.exists()) {
             if (level.createNewFile()) {
-                File regions = new File(Bukkit.getWorldContainer(), "world/region");
+                File regions = new File(worldConvertFolder, world + "/region");
                 if (regions.exists() && Objects.requireNonNull(regions.list()).length > 0) {
                     if (Arrays.stream(Objects.requireNonNull(regions.list())).filter(p -> p.endsWith(".mca")).toArray().length > 0) {
-                        File region = new File(Bukkit.getWorldContainer(), world + "/" + Arrays.stream(Objects.requireNonNull(regions.list())).filter(p -> p.endsWith(".mca")).toArray()[0]);
-                        NBTInputStream inputStream = new NBTInputStream(new FileInputStream(region));
-                        Optional<CompoundTag> tag = inputStream.readTag().getAsCompoundTag();
-                        inputStream.close();
-                        if (tag.isPresent()) {
-                            Optional<CompoundTag> dataTag = tag.get().getAsCompoundTag("Chunk");
-                            if (dataTag.isPresent()) {
-                                int dataVersion = dataTag.get().getIntValue("DataVersion").orElse(-1);
+                        NBTOutputStream outputStream = new NBTOutputStream(new FileOutputStream(level));
 
-                                NBTOutputStream outputStream = new NBTOutputStream(new FileOutputStream(level));
+                        CompoundMap dataMap = new CompoundMap();
+                        dataMap.put(new IntTag("SpawnX", 0));
+                        dataMap.put(new IntTag("SpawnY", 255));
+                        dataMap.put(new IntTag("SpawnZ", 0));
+                        CompoundTag dataTag = new CompoundTag("Data", dataMap);
 
-                                CompoundMap cm = new CompoundMap();
-                                cm.put(new IntTag("SpawnX", 0));
-                                cm.put(new IntTag("SpawnY", 255));
-                                cm.put(new IntTag("SpawnZ", 0));
-                                if (dataVersion != -1) {
-                                    cm.put(new IntTag("DataVersion", dataVersion));
-                                }
-                                CompoundTag root = new CompoundTag("Data", cm);
-                                outputStream.writeTag(root);
-                                outputStream.flush();
-                                outputStream.close();
-                            }
-                        }
+                        CompoundMap rootMap = new CompoundMap();
+                        rootMap.put(dataTag);
+                        CompoundTag rootTag = new CompoundTag("", rootMap);
+
+                        outputStream.writeTag(rootTag);
+                        outputStream.flush();
+                        outputStream.close();
                     }
                 }
             }
