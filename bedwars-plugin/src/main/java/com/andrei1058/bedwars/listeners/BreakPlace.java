@@ -32,8 +32,8 @@ import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.api.region.Region;
 import com.andrei1058.bedwars.api.server.ServerType;
+import com.andrei1058.bedwars.api.util.BlastProtectionUtil;
 import com.andrei1058.bedwars.arena.Arena;
-import com.andrei1058.bedwars.commands.bedwars.subcmds.sensitive.setup.AutoCreateTeams;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.support.paper.PaperSupport;
 import com.andrei1058.bedwars.popuptower.TowerEast;
@@ -43,7 +43,6 @@ import com.andrei1058.bedwars.popuptower.TowerWest;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
@@ -60,6 +59,7 @@ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -73,9 +73,11 @@ public class BreakPlace implements Listener {
 
     private static final List<Player> buildSession = new ArrayList<>();
     private final boolean allowFireBreak;
+    private final BlastProtectionUtil blastProtection;
 
     public BreakPlace() {
         allowFireBreak = config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_ALLOW_FIRE_EXTINGUISH);
+        blastProtection = new BlastProtectionUtil(nms, BedWars.getAPI());
     }
 
     @EventHandler
@@ -100,29 +102,16 @@ public class BreakPlace implements Listener {
 
 
     @EventHandler(ignoreCancelled = true)
-    public void onBurn(BlockBurnEvent event) {
+    public void onBurn(@NotNull BlockBurnEvent event) {
         IArena arena = Arena.getArenaByIdentifier(event.getBlock().getWorld().getName());
         if (arena == null) return;
-        if (!arena.getConfig().getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK)) {
+        if (!arena.isAllowMapBreak()) {
             event.setCancelled(true);
             return;
         }
-        // check if bed if allow map break
-        if (nms.isBed(event.getBlock().getType())) {
-            for (ITeam t : arena.getTeams()) {
-                for (int x = event.getBlock().getX() - 2; x < event.getBlock().getX() + 2; x++) {
-                    for (int y = event.getBlock().getY() - 2; y < event.getBlock().getY() + 2; y++) {
-                        for (int z = event.getBlock().getZ() - 2; z < event.getBlock().getZ() + 2; z++) {
-                            if (t.getBed().getBlockX() == x && t.getBed().getBlockY() == y && t.getBed().getBlockZ() == z) {
-                                if (!t.isBedDestroyed()) {
-                                    event.setCancelled(true);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+
+        if (arena.isTeamBed(event.getBlock().getLocation())){
+            event.setCancelled(true);
         }
     }
 
@@ -172,7 +161,7 @@ public class BreakPlace implements Listener {
             // prevent modifying wood if protected
             // issue #531
             if (e.getBlockPlaced().getType().toString().contains("STRIPPED_") && e.getBlock().getType().toString().contains("_WOOD")) {
-                if (!a.getConfig().getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK)) {
+                if (null != arena && !arena.isAllowMapBreak()) {
                     e.setCancelled(true);
                     return;
                 }
@@ -180,11 +169,15 @@ public class BreakPlace implements Listener {
 
             a.addPlacedBlock(e.getBlock());
             if (e.getBlock().getType() == Material.TNT) {
-                e.getBlockPlaced().setType(Material.AIR);
-                TNTPrimed tnt = Objects.requireNonNull(e.getBlock().getLocation().getWorld()).spawn(e.getBlock().getLocation().add(0.5, 0, 0.5), TNTPrimed.class);
-                tnt.setFuseTicks(45);
-                nms.setSource(tnt, p);
-                return;
+                // Automatic ignition of TNT
+                if (config.getBoolean(ConfigPath.GENERAL_TNT_AUTO_IGNITE))
+                {
+                    e.getBlockPlaced().setType(Material.AIR);
+                    TNTPrimed tnt = Objects.requireNonNull(e.getBlock().getLocation().getWorld()).spawn(e.getBlock().getLocation().add(0.5, 0, 0.5), TNTPrimed.class);
+                    tnt.setFuseTicks(config.getInt(ConfigPath.GENERAL_TNT_FUSE_TICKS));
+                    nms.setSource(tnt, p);
+                    return;
+                }
             } else if (BedWars.shop.getBoolean(ConfigPath.SHOP_SPECIAL_TOWER_ENABLE)) {
                 if (e.getBlock().getType() == Material.valueOf(shop.getString(ConfigPath.SHOP_SPECIAL_TOWER_MATERIAL))) {
 
@@ -375,7 +368,8 @@ public class BreakPlace implements Listener {
                 }
             }
 
-            if (!a.getConfig().getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK)) {
+            if (!a.isAllowMapBreak())
+            {
                 if (!a.isBlockPlaced(e.getBlock())) {
                     p.sendMessage(getMsg(p, Messages.INTERACT_CANNOT_BREAK_BLOCK));
                     e.setCancelled(true);
@@ -505,21 +499,16 @@ public class BreakPlace implements Listener {
 
 
     @EventHandler
-    public void onBlow(EntityExplodeEvent e) {
+    public void onBlow(@NotNull EntityExplodeEvent e) {
         if (e.isCancelled()) return;
-        if (e.blockList().isEmpty()) return;
-        IArena a = Arena.getArenaByIdentifier(e.blockList().get(0).getWorld().getName());
+        IArena a = Arena.getArenaByIdentifier(e.getLocation().getWorld().getName());
+
         if (a != null) {
-            if (a.getNextEvent() != NextEvent.GAME_END) {
-                List<Block> destroyed = e.blockList();
-                for (Block block : new ArrayList<>(destroyed)) {
-                    if (!a.isBlockPlaced(block)) {
-                        e.blockList().remove(block);
-                    } else if (AutoCreateTeams.is13Higher()) {
-                        if (block.getType().toString().contains("_GLASS")) e.blockList().remove(block);
-                    }
-                }
+            if (a.getStatus() == GameState.playing) {
+                e.blockList().removeIf((b) -> blastProtection.isProtected(a, e.getLocation(), b, 0.3));
+                return;
             }
+            e.blockList().clear();
         }
     }
 
@@ -527,17 +516,12 @@ public class BreakPlace implements Listener {
     public void onBlockExplode(BlockExplodeEvent e) {
         if (e.isCancelled()) return;
         if (e.blockList().isEmpty()) return;
+
         IArena a = Arena.getArenaByIdentifier(e.blockList().get(0).getWorld().getName());
+
         if (a != null) {
             if (a.getNextEvent() != NextEvent.GAME_END) {
-                List<Block> destroyed = e.blockList();
-                for (Block block : new ArrayList<>(destroyed)) {
-                    if (!a.isBlockPlaced(block)) {
-                        e.blockList().remove(block);
-                    } else if (AutoCreateTeams.is13Higher()) {
-                        if (block.getType().toString().contains("_GLASS")) e.blockList().remove(block);
-                    }
-                }
+                e.blockList().removeIf((b) -> blastProtection.isProtected(a, e.getBlock().getLocation(), b, 0.3));
             }
         }
     }

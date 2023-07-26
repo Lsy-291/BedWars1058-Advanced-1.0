@@ -348,4 +348,6 @@ public interface ITeam {
      * @param location x,y,z.
      */
     void setKillDropsLocation(Vector location);
+
+    boolean isBed(Location location);
 }

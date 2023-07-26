@@ -181,6 +181,7 @@ public class Arena implements IArena {
     private int yKillHeight;
     private Instant startTime;
     private ITeamAssigner teamAssigner = new TeamAssigner();
+    private boolean allowMapBreak = false;
 
     /**
      * Load an arena.
@@ -236,6 +237,7 @@ public class Arena implements IArena {
         minPlayers = yml.getInt("minPlayers");
         allowSpectate = yml.getBoolean("allowSpectate");
         islandRadius = yml.getInt(ConfigPath.ARENA_ISLAND_RADIUS);
+        allowMapBreak = yml.getBoolean(ConfigPath.ARENA_ALLOW_MAP_BREAK);
         if (config.getYml().get("arenaGroups") != null) {
             if (config.getYml().getStringList("arenaGroups").contains(yml.getString("group"))) {
                 group = yml.getString("group");
@@ -2695,5 +2697,36 @@ public class Arena implements IArena {
                 PaperSupport.teleportC(player, config.getConfigLoc("lobbyLoc"), PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
         }
+    }
+
+    public boolean isAllowMapBreak() {
+        return allowMapBreak;
+    }
+
+    public void setAllowMapBreak(boolean allowMapBreak) {
+        this.allowMapBreak = allowMapBreak;
+    }
+
+    @Override
+    public ITeam getBedsTeam(@NotNull Location location) {
+        if (!location.getWorld().getName().equals(this.worldName)) {
+            throw new RuntimeException("Given location is not on this game world.");
+        }
+
+        if (!nms.isBed(location.getBlock().getType())) {
+            return null;
+        }
+
+        for (ITeam team : this.teams) {
+            if (team.isBed(location)) {
+                return team;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean isTeamBed(Location location) {
+        return null != getBedsTeam(location);
     }
 }
