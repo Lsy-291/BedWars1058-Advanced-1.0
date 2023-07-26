@@ -494,4 +494,19 @@ public interface IArena {
     void setTeamAssigner(ITeamAssigner teamAssigner);
 
     List<Player> getLeavingPlayers();
+
+    /**
+     * Check if breaking map is allowed, otherwise only placed blocks are allowed.
+     * Some blocks like have a special protections, like blocks under shopkeepers, bed, ecc.
+     */
+    boolean isAllowMapBreak();
+
+    /**
+     * Toggle map block break rule.
+     */
+    void setAllowMapBreak(boolean allowMapBreak);
+
+    boolean isTeamBed(Location location);
+
+    ITeam getBedsTeam(Location location);
 }
