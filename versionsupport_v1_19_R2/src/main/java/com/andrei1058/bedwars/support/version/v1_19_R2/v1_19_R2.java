@@ -334,17 +334,18 @@ public class v1_19_R2 extends VersionSupport {
     }
 
     @Override
-    public void registerTntWhitelist(float endStoneBlast, float glassBlast) {
+    public void registerTntWhitelist() {
         try {
+            var protection = 300f;
             // blast resistance
             Field field = BlockBase.class.getDeclaredField("aH");
             field.setAccessible(true);
             // end stone
-            field.set(Blocks.fj, endStoneBlast);
+            field.set(Blocks.fj, protection);
             // obsidian
-            field.set(Blocks.ce, glassBlast);
+            field.set(Blocks.ce, protection);
             // standard glass
-            field.set(Blocks.aH, glassBlast);
+            field.set(Blocks.aH, protection);
 
             var coloredGlass = new net.minecraft.world.level.block.Block[]{
                     Blocks.dU, Blocks.dV, Blocks.dW, Blocks.dX,
@@ -357,7 +358,7 @@ public class v1_19_R2 extends VersionSupport {
             Arrays.stream(coloredGlass).forEach(
                     glass -> {
                         try {
-                            field.set(glass, glassBlast);
+                            field.set(glass, protection);
                         } catch (IllegalAccessException e) {
                             throw new RuntimeException(e);
                         }

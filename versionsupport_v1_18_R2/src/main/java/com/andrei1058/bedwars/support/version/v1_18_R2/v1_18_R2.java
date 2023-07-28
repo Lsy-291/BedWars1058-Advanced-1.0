@@ -334,31 +334,12 @@ public class v1_18_R2 extends VersionSupport {
     }
 
     @Override
-    public void registerTntWhitelist(float endStoneBlast, float glassBlast) {
+    public void registerTntWhitelist() {
         try {
             Field field = BlockBase.class.getDeclaredField("aH");
             field.setAccessible(true);
-            for (net.minecraft.world.level.block.Block glass : new net.minecraft.world.level.block.Block[]{
-                    Blocks.bQ,
-                    Blocks.dg,
-                    Blocks.dh,
-                    Blocks.di,
-                    Blocks.dj,
-                    Blocks.dk,
-                    Blocks.dl,
-                    Blocks.dm,
-                    Blocks.dn,
-                    Blocks.dp,
-                    Blocks.dq,
-                    Blocks.dr,
-                    Blocks.ds,
-                    Blocks.dt,
-                    Blocks.du,
-                    Blocks.dv,
-            }) {
-                field.set(glass, glassBlast);
-            }
-            field.set(Blocks.eq, endStoneBlast);
+            field.set(Blocks.eq, 300f);
+            field.set(Blocks.bQ, 300f);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
