@@ -138,13 +138,6 @@ public abstract class VersionSupport {
     public abstract boolean isInvisibilityPotion(ItemStack itemStack);
 
     /**
-     * Check if type is a Glass type material
-     */
-    public boolean isGlass(Material type) {
-        return type != Material.AIR && (type == Material.GLASS || type.toString().contains("_GLASS"));
-    }
-
-    /**
      * Register custom entities
      */
     public abstract void registerEntities();
@@ -212,9 +205,9 @@ public abstract class VersionSupport {
     public abstract void colorBed(ITeam team);
 
     /**
-     * Modify block blast resistance.
+     * Register tnt whitelist
      */
-    public abstract void registerTntWhitelist(float endStoneBlast, float glassBlast);
+    public abstract void registerTntWhitelist();
 
     /**
      * Egg bridge particles
