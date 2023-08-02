@@ -93,10 +93,7 @@ public class CmdTpStaff extends SubCommand {
     public List<String> getTabComplete() {
         List<String> players = new ArrayList<>();
         for (IArena a : Arena.getArenas()) {
-            for (Player p : a.getPlayers()) {
-                players.add(p.getName());
-            }
-            for (Player p : a.getSpectators()) {
+            for (Player p : a.getAllPlayers()) {
                 players.add(p.getName());
             }
         }

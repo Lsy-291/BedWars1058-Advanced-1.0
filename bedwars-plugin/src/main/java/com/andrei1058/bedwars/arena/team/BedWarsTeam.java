@@ -633,10 +633,7 @@ public class BedWarsTeam implements ITeam {
         Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
             for (Player m : getMembers()) {
                 if (m.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-                    for (Player p : getArena().getPlayers()) {
-                        BedWars.nms.hideArmor(m, p);
-                    }
-                    for (Player p : getArena().getSpectators()) {
+                    for (Player p : getArena().getAllPlayers()) {
                         BedWars.nms.hideArmor(m, p);
                     }
                 }

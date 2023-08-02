@@ -171,16 +171,12 @@ public class ReJoin {
         if (bwt != null && destroyTeam && bwt.getMembers().isEmpty()) {
             bwt.setBedDestroyed(true);
             if (bwt != null) {
-                for (Player p2 : arena.getPlayers()) {
-                    p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
-                            .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
-                }
-                for (Player p2 : arena.getSpectators()) {
+                for (Player p2 : arena.getAllPlayers()) {
                     p2.sendMessage(getMsg(p2, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", bwt.getColor().chat().toString())
                             .replace("{TeamName}", bwt.getDisplayName(Language.getPlayerLanguage(p2))));
                 }
             }
-            arena.checkWinner();
+            arena.checkWinner(getArena().getSurvivingTeams());
         }
     }
 

@@ -370,8 +370,7 @@ public class BwSidebar implements ISidebar {
 
         handleHealthIcon();
 
-        arena.getPlayers().forEach(playing -> giveUpdateTabFormat(playing, true));
-        arena.getSpectators().forEach(spectating -> giveUpdateTabFormat(spectating, true));
+        arena.getAllPlayers().forEach(needUpdate -> giveUpdateTabFormat(needUpdate, true));
     }
 
     /**
