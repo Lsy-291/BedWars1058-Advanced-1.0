@@ -679,9 +679,11 @@ public class Arena implements IArena {
                 if(leaving.contains(p.getUniqueId())) return;
                 for (Player on : Bukkit.getOnlinePlayers()) {
                     if (on == p) continue;
-                    if (getAllPlayers().contains(on))
-                    {
+                    if (getSpectators().contains(on)) {
                         BedWars.nms.spigotShowPlayer(p, on);
+                        BedWars.nms.spigotShowPlayer(on, p);
+                    } else if (getPlayers().contains(on)) {
+                        BedWars.nms.spigotHidePlayer(p, on);
                         BedWars.nms.spigotShowPlayer(on, p);
                     } else {
                         BedWars.nms.spigotHidePlayer(p, on);
