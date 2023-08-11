@@ -1,7 +1,6 @@
 package com.andrei1058.bedwars.money.internal;
 
 import com.andrei1058.bedwars.BedWars;
-import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
 import com.andrei1058.bedwars.api.events.gameplay.GameEndEvent;
 import com.andrei1058.bedwars.api.events.player.PlayerBedBreakEvent;
@@ -9,7 +8,6 @@ import com.andrei1058.bedwars.api.events.player.PlayerKillEvent;
 import com.andrei1058.bedwars.api.language.Language;
 import com.andrei1058.bedwars.api.language.Messages;
 import com.andrei1058.bedwars.configuration.MoneyConfig;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,41 +21,29 @@ public class MoneyListeners implements Listener {
      */
     @EventHandler
     public void onGameEnd(GameEndEvent e) {
-        for (UUID p : e.getWinners()) {
-            Player player = Bukkit.getPlayer(p);
-            if (player == null) continue;
-            int gameWin = MoneyConfig.money.getInt("money-rewards.game-win");
-            if (gameWin > 0) {
-                BedWars.getEconomy().giveMoney(player, gameWin);
-                player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_WIN).replace("{money}", String.valueOf(gameWin)));
-            }
-            ITeam bwt = e.getArena().getExTeam(player.getUniqueId());
-            IArena arena = e.getArena();
-            if (bwt != null) {
-                if (arena.getMaxInTeam() > 1) {
-                    int teamMate = MoneyConfig.money.getInt("money-rewards.per-teammate");
-                    if (teamMate > 0) {
-                        BedWars.getEconomy().giveMoney(player, teamMate);
-                        player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teamMate)));
+        int moneyRewardPerTeammateSurvival = MoneyConfig.money.getInt("money-rewards.per-teammate");
+        int moneyRewardGameVictory = MoneyConfig.money.getInt("money-rewards.game-win");
+        e.getArena().getAllPlayers().forEach(player -> {
+            if (player != null) {
+                UUID playerUUID = player.getUniqueId();
+                if (e.getAliveWinners().contains(playerUUID) && moneyRewardGameVictory > 0)
+                {
+                    BedWars.getEconomy().giveMoney(player, moneyRewardGameVictory);
+                    player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_WIN).replace("{money}", String.valueOf(moneyRewardGameVictory)));
+                }
+
+                ITeam team = e.getArena().getExTeam(playerUUID);
+                int teamMemberCount = team.getMembers().size();
+                if (teamMemberCount > 1) {
+                    if (moneyRewardPerTeammateSurvival > 0) {
+                        int teammateRewards = moneyRewardPerTeammateSurvival * teamMemberCount;
+                        BedWars.getEconomy().giveMoney(player, teammateRewards);
+                        player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teammateRewards)));
                     }
                 }
+
             }
-        }
-        for (UUID p : e.getLosers()) {
-            Player player = Bukkit.getPlayer(p);
-            if (player == null) continue;
-            ITeam bwt = e.getArena().getExTeam(player.getUniqueId());
-            IArena arena = e.getArena();
-            if (bwt != null) {
-                if (arena.getMaxInTeam() > 1) {
-                    int teamMate = MoneyConfig.money.getInt("money-rewards.per-teammate");
-                    if (teamMate > 0) {
-                        BedWars.getEconomy().giveMoney(player, teamMate);
-                        player.sendMessage(Language.getMsg(player, Messages.MONEY_REWARD_PER_TEAMMATE).replace("{money}", String.valueOf(teamMate)));
-                    }
-                }
-            }
-        }
+        });
     }
 
     /**

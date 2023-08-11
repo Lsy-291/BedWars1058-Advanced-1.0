@@ -48,8 +48,7 @@ public class GameRestartingTask implements Runnable, RestartingTask {
     public GameRestartingTask(@NotNull Arena arena) {
         this.arena = arena;
         task = Bukkit.getScheduler().runTaskTimer(BedWars.plugin, this, 0, 20L);
-        Sounds.playSound("game-end", arena.getPlayers());
-        Sounds.playSound("game-end", arena.getSpectators());
+        Sounds.playSound("game-end", arena.getAllPlayers());
     }
 
     /**

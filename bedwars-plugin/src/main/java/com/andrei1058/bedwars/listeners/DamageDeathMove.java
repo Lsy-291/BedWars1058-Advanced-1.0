@@ -558,7 +558,7 @@ public class DamageDeathMove implements Listener {
                     for (Player eachPlayer : a.getWorld().getPlayers()) {
                         eachPlayer.sendMessage(getMsg(eachPlayer, Messages.TEAM_ELIMINATED_CHAT).replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(eachPlayer))));
                     }
-                    Bukkit.getScheduler().runTaskLater(plugin, a::checkWinner, 40L);
+                    if (a.getSurvivingTeams().size() == 1) Bukkit.getScheduler().runTaskLater(plugin, () -> { a.checkWinner(a.getSurvivingTeams()); }, 40L);
                 }
             } else {
                 //respawn session
@@ -605,12 +605,7 @@ public class DamageDeathMove implements Listener {
                     }
                     // if the moving player has invisible armor
                     if (a.getShowTime().containsKey(e.getPlayer())) {
-                        for (Player p : a.getPlayers()) {
-                            nms.hideArmor(e.getPlayer(), p);
-                        }
-                    }
-                    if (a.getShowTime().containsKey(e.getPlayer())) {
-                        for (Player p : a.getSpectators()) {
+                        for (Player p : a.getAllPlayers()) {
                             nms.hideArmor(e.getPlayer(), p);
                         }
                     }

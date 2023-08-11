@@ -21,7 +21,6 @@
 package com.andrei1058.bedwars.arena.tasks;
 
 import com.andrei1058.bedwars.BedWars;
-import com.andrei1058.bedwars.api.arena.GameState;
 import com.andrei1058.bedwars.api.arena.IArena;
 import com.andrei1058.bedwars.api.arena.generator.IGenerator;
 import com.andrei1058.bedwars.api.arena.team.ITeam;
@@ -106,11 +105,7 @@ public class GamePlayingTask implements Runnable, PlayingTask {
             case BEDS_DESTROY:
                 beds_destroy_countdown--;
                 if (getBedsDestroyCountdown() == 0) {
-                    for (Player p : getArena().getPlayers()) {
-                        nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_BEDS_DESTROYED), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_BEDS_DESTROYED), 0, 40, 10);
-                        p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_BEDS_DESTROYED));
-                    }
-                    for (Player p : getArena().getSpectators()) {
+                    for (Player p : getArena().getAllPlayers()) {
                         nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_BEDS_DESTROYED), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_BEDS_DESTROYED), 0, 40, 10);
                         p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_BEDS_DESTROYED));
                     }
@@ -123,15 +118,7 @@ public class GamePlayingTask implements Runnable, PlayingTask {
             case ENDER_DRAGON:
                 dragon_spawn_countdown--;
                 if (getDragonSpawnCountdown() == 0) {
-                    for (Player p : getArena().getPlayers()) {
-                        nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_SUDDEN_DEATH), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_SUDDEN_DEATH), 0, 40, 10);
-                        for (ITeam t : getArena().getTeams()) {
-                            if (t.getMembers().isEmpty()) continue;
-                            p.sendMessage(getMsg(p, Messages.NEXT_EVENT_CHAT_ANNOUNCE_SUDDEN_DEATH).replace("{TeamDragons}", String.valueOf(t.getDragons()))
-                                    .replace("{TeamColor}", t.getColor().chat().toString()).replace("{TeamName}", t.getDisplayName(Language.getPlayerLanguage(p))));
-                        }
-                    }
-                    for (Player p : getArena().getSpectators()) {
+                    for (Player p : getArena().getAllPlayers()) {
                         nms.sendTitle(p, getMsg(p, Messages.NEXT_EVENT_TITLE_ANNOUNCE_SUDDEN_DEATH), getMsg(p, Messages.NEXT_EVENT_SUBTITLE_ANNOUNCE_SUDDEN_DEATH), 0, 40, 10);
                         for (ITeam t : getArena().getTeams()) {
                             if (t.getMembers().isEmpty()) continue;
@@ -150,10 +137,7 @@ public class GamePlayingTask implements Runnable, PlayingTask {
                 break;
             case GAME_END:
                 game_end_countdown--;
-                if (getGameEndCountdown() == 0) {
-                    getArena().checkWinner();
-                    getArena().changeStatus(GameState.restarting);
-                }
+                if (getGameEndCountdown() == 0) getArena().checkWinner(getArena().getSurvivingTeams());
                 break;
         }
         int distance = 0;

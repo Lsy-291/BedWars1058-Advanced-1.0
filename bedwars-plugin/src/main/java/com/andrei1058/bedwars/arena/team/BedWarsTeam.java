@@ -633,10 +633,7 @@ public class BedWarsTeam implements ITeam {
         Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> {
             for (Player m : getMembers()) {
                 if (m.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-                    for (Player p : getArena().getPlayers()) {
-                        BedWars.nms.hideArmor(m, p);
-                    }
-                    for (Player p : getArena().getSpectators()) {
+                    for (Player p : getArena().getAllPlayers()) {
                         BedWars.nms.hideArmor(m, p);
                     }
                 }
@@ -731,6 +728,14 @@ public class BedWarsTeam implements ITeam {
 
     public List<Player> getMembers() {
         return members;
+    }
+
+    public List<Player> getMembersInCurrentGame() {
+        List<Player> clonedMembers = new ArrayList<>(membersCache);
+
+        clonedMembers.removeIf(member -> getArena().getLeavingPlayers().contains(member.getUniqueId()));
+
+        return clonedMembers;
     }
 
     public Location getBed() {

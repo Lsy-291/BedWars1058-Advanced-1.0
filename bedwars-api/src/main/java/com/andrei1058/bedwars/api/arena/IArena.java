@@ -119,7 +119,12 @@ public interface IArena {
     GameState getStatus();
 
     /**
-     * Get players in arena.
+     * Get all players in the arena
+     */
+    List<Player> getAllPlayers();
+
+    /**
+     * Get alive players in arena.
      */
     List<Player> getPlayers();
 
@@ -239,6 +244,11 @@ public interface IArena {
     List<ITeam> getTeams();
 
     /**
+     * Get all the surviving teams
+     */
+    List<ITeam> getSurvivingTeams();
+
+    /**
      * Add placed block to cache.
      * So players will be able to remove blocks placed by players only.
      */
@@ -338,7 +348,7 @@ public interface IArena {
      * Check winner. Will check if the game has a winner in certain conditions. Manage your win conditions.
      * Call the arena restart and the needed stuff.
      */
-    void checkWinner();
+    void checkWinner(List<ITeam> survivingTeams);
 
     /**
      * Add a kill to the player temp stats.
@@ -493,5 +503,5 @@ public interface IArena {
 
     void setTeamAssigner(ITeamAssigner teamAssigner);
 
-    List<Player> getLeavingPlayers();
+    List<UUID> getLeavingPlayers();
 }
