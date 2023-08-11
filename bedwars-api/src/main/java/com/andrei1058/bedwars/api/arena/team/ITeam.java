@@ -69,9 +69,14 @@ public interface ITeam {
     IArena getArena();
 
     /**
-     * Get alive team members.
+     * Get team members.(range: alive, pre-respawn, excluding spectators who became eliminated)
      */
     List<Player> getMembers();
+
+    /**
+     * Get members still in the current game session (including those who are alive, pre-respawn, and eliminated, but excluding those who have quit midway)
+     */
+    List<Player> getMembersInCurrentGame();
 
     /**
      * Restore lost default sword.

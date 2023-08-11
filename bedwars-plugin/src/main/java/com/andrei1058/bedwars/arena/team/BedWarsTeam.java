@@ -730,6 +730,14 @@ public class BedWarsTeam implements ITeam {
         return members;
     }
 
+    public List<Player> getMembersInCurrentGame() {
+        List<Player> clonedMembers = new ArrayList<>(membersCache);
+
+        clonedMembers.removeIf(member -> getArena().getLeavingPlayers().contains(member.getUniqueId()));
+
+        return clonedMembers;
+    }
+
     public Location getBed() {
         return bed;
     }

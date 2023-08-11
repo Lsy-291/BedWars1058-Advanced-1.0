@@ -128,7 +128,7 @@ public class Arena implements IArena {
     private List<Region> regionsList = new ArrayList<>();
     private int renderDistance;
 
-    private final List<Player> leaving = new ArrayList<>();
+    private final List<UUID> leaving = new ArrayList<>();
 
     /**
      * Current event, used at scoreboard
@@ -460,7 +460,7 @@ public class Arena implements IArena {
             }
         }
 
-        leaving.remove(p);
+        leaving.remove(p.getUniqueId());
 
         if (status == GameState.waiting || (status == GameState.starting && (startingTask != null && startingTask.getCountdown() > 1))) {
             if (players.size() >= maxPlayers && !isVip(p)) {
@@ -636,7 +636,7 @@ public class Arena implements IArena {
                 reJoin.destroy(true);
             }
 
-            leaving.remove(p);
+            leaving.remove(p.getUniqueId());
 
             p.closeInventory();
             spectators.add(p);
@@ -667,7 +667,7 @@ public class Arena implements IArena {
             p.setGameMode(GameMode.ADVENTURE);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if(leaving.contains(p)) return;
+                if(leaving.contains(p.getUniqueId())) return;
                 p.setAllowFlight(true);
                 p.setFlying(true);
             }, 5L);
@@ -676,7 +676,7 @@ public class Arena implements IArena {
                 p.getPassenger().remove();
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if(leaving.contains(p)) return;
+                if(leaving.contains(p.getUniqueId())) return;
                 for (Player on : Bukkit.getOnlinePlayers()) {
                     if (on == p) continue;
                     if (getAllPlayers().contains(on))
@@ -711,7 +711,7 @@ public class Arena implements IArena {
                 p.getInventory().setArmorContents(null);
             });
 
-            leaving.remove(p);
+            leaving.remove(p.getUniqueId());
 
             p.sendMessage(getMsg(p, Messages.COMMAND_JOIN_SPECTATOR_MSG).replace("{arena}", this.getDisplayName()));
 
@@ -749,10 +749,10 @@ public class Arena implements IArena {
      * @param disconnect True if the player was disconnected
      */
     public void removePlayer(@NotNull Player p, boolean disconnect) {
-        if(leaving.contains(p)) {
+        if(leaving.contains(p.getUniqueId())) {
             return;
         } else {
-            leaving.add(p);
+            leaving.add(p.getUniqueId());
         }
         debug("Player removed: " + p.getName() + " arena: " + getArenaName());
         respawnSessions.remove(p);
@@ -997,10 +997,10 @@ public class Arena implements IArena {
     public void removeSpectator(@NotNull Player p, boolean disconnect) {
         debug("Spectator removed: " + p.getName() + " arena: " + getArenaName());
 
-        if(leaving.contains(p)) {
+        if(leaving.contains(p.getUniqueId())) {
             return;
         } else {
-            leaving.add(p);
+            leaving.add(p.getUniqueId());
         }
 
         Bukkit.getPluginManager().callEvent(new PlayerLeaveArenaEvent(p, this, null));
@@ -1855,7 +1855,7 @@ public class Arena implements IArena {
             for (Player player : getAllPlayers())
             {
                 player.getInventory().clear();
-                if (winningTeam.getMembers().contains(player)) {
+                if (winningTeam.getMembersInCurrentGame().contains(player)) {
                     nms.sendTitle(player, getMsg(player, Messages.GAME_END_VICTORY_PLAYER_TITLE), null, 0, 70, 20);
                     winnersStr.append(player.getDisplayName()).append(" ");
                 } else {
@@ -1898,18 +1898,12 @@ public class Arena implements IArena {
             }
 
             List<UUID> winners = new ArrayList<>(), losers = new ArrayList<>(), aliveWinners = new ArrayList<>();
-            getPlayers().forEach(p -> aliveWinners.add(p.getUniqueId()));
-
-            winningTeam.getMembers().forEach(p -> winners.add(p.getUniqueId()));
-
-            for (ITeam bwt : getTeams())
-            {
-                if (bwt == winningTeam) continue;
-
-                for (Player p : bwt.getMembers()) {
-                    losers.add(p.getUniqueId());
-                }
-            }
+            winningTeam.getMembersInCurrentGame().forEach(player -> winners.add(player.getUniqueId()));
+            winningTeam.getMembers().forEach(player -> aliveWinners.add(player.getUniqueId()));
+            
+            getTeams().forEach(team -> {
+                if (team != winningTeam) team.getMembers().forEach(player -> losers.add(player.getUniqueId()));
+            });
 
             Bukkit.getPluginManager().callEvent(new GameEndEvent(this, winners, losers, winningTeam, aliveWinners));
 
@@ -2620,9 +2614,7 @@ public class Arena implements IArena {
     }
 
     @Override
-    public List<Player> getLeavingPlayers() {
-        return leaving;
-    }
+    public List<UUID> getLeavingPlayers() { return leaving; }
 
     /**
      * Remove player from world.

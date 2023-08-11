@@ -74,49 +74,32 @@ public class LevelListeners implements Listener {
 
     @EventHandler
     public void onGameEnd(GameEndEvent e) {
-        for (UUID p : e.getWinners()) {
-            if (PlayerLevel.getLevelByPlayer(p) != null) {
-                Player p1 = Bukkit.getPlayer(p);
-                if (p1 == null) continue;
-                int xpAmount = LevelsConfig.levels.getInt("xp-rewards.game-win");
-                if (xpAmount > 0){
-                    PlayerLevel.getLevelByPlayer(p).addXp(xpAmount, PlayerXpGainEvent.XpSource.GAME_WIN);
-                    p1.sendMessage(Language.getMsg(p1, Messages.XP_REWARD_WIN).replace("{xp}", String.valueOf(xpAmount)));
+        int expRewardPerTeammateSurvival = LevelsConfig.levels.getInt("xp-rewards.per-teammate");
+        int expRewardGameVictory = LevelsConfig.levels.getInt("xp-rewards.game-win");
+
+        // Rewards given to spectators and non eliminated players
+        e.getArena().getAllPlayers().forEach(player -> {
+            UUID playerUUID = player.getUniqueId();
+            if (PlayerLevel.getLevelByPlayer(playerUUID) != null) {
+                // Game Victory Rewards
+                if (e.getAliveWinners().contains(playerUUID) && expRewardGameVictory > 0)
+                {
+                    PlayerLevel.getLevelByPlayer(playerUUID).addXp(expRewardGameVictory, PlayerXpGainEvent.XpSource.GAME_WIN);
+                    player.sendMessage(Language.getMsg(player, Messages.XP_REWARD_WIN).replace("{xp}", String.valueOf(expRewardGameVictory)));
                 }
-                ITeam bwt = e.getArena().getExTeam(p1.getUniqueId());
-                if (bwt != null) {
-                    //noinspection deprecation
-                    if (bwt.getMembersCache().size() > 1) {
-                        int xpAmountPerTmt = LevelsConfig.levels.getInt("xp-rewards.per-teammate");
-                        if (xpAmountPerTmt > 0) {
-                            //noinspection deprecation
-                            int tr = xpAmountPerTmt * bwt.getMembersCache().size();
-                            PlayerLevel.getLevelByPlayer(p).addXp(tr, PlayerXpGainEvent.XpSource.PER_TEAMMATE);
-                            p1.sendMessage(Language.getMsg(p1, "xp-reward-per-teammate").replace("{xp}", String.valueOf(tr)));
-                        }
+
+                // Teammate Survival Reward
+                ITeam team = e.getArena().getExTeam(player.getUniqueId());
+                int teamMemberCount = team.getMembers().size();
+                if (teamMemberCount > 1) {
+                    if (expRewardPerTeammateSurvival > 0) {
+                        int teammateRewards = expRewardPerTeammateSurvival * teamMemberCount;
+                        PlayerLevel.getLevelByPlayer(playerUUID).addXp(teammateRewards, PlayerXpGainEvent.XpSource.PER_TEAMMATE);
+                        player.sendMessage(Language.getMsg(player, Messages.XP_REWARD_PER_TEAMMATE).replace("{xp}", String.valueOf(teammateRewards)));
                     }
                 }
             }
-        }
-        for (UUID p : e.getLosers()) {
-            if (PlayerLevel.getLevelByPlayer(p) != null) {
-                Player p1 = Bukkit.getPlayer(p);
-                if (p1 == null) continue;
-                ITeam bwt = e.getArena().getExTeam(p1.getUniqueId());
-                if (bwt != null) {
-                    //noinspection deprecation
-                    if (bwt.getMembersCache().size() > 1) {
-                        int xpAmountPerTmt = LevelsConfig.levels.getInt("xp-rewards.per-teammate");
-                        if (xpAmountPerTmt > 0) {
-                            //noinspection deprecation
-                            int tr = LevelsConfig.levels.getInt("xp-rewards.per-teammate") * bwt.getMembersCache().size();
-                            PlayerLevel.getLevelByPlayer(p).addXp(tr, PlayerXpGainEvent.XpSource.PER_TEAMMATE);
-                            p1.sendMessage(Language.getMsg(p1, Messages.XP_REWARD_PER_TEAMMATE).replace("{xp}", String.valueOf(tr)));
-                        }
-                    }
-                }
-            }
-        }
+        });
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
